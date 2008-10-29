@@ -2,9 +2,8 @@ class Geocode < ActiveRecord::Base
   include Comparable
 
   has_many :geocodings, :dependent => :destroy
+  has_many :geocoder_queries, :dependent => :destroy
   
-  validates_uniqueness_of :query
-
   cattr_accessor :geocoder
   
   def distance_to(destination, units = :miles, formula = :haversine)
@@ -46,7 +45,8 @@ class Geocode < ActiveRecord::Base
   def <=>(comparison_object)
     self.to_s <=> comparison_object.to_s
   end
-  
+
+  # Note this may return values to the opposite way you were expecting!
   def coordinates
     "#{longitude},#{latitude}"
   end
@@ -63,4 +63,16 @@ class Geocode < ActiveRecord::Base
       end
     end
   end
+  
+  # Provide a find_by_query method that used to be created by rails for the Geocode model when it originally had a query column,
+  # however, the query column was moved to a new table, geocoder_queries, to prevent duplication of geocoder data in the geocodes table.
+  # This method returns a Geocode instance or nil if it cannot be found.
+  def self.find_by_query(query)
+    geocoder_query = GeocoderQuery.find_by_query(query)
+    if (geocoder_query)
+      return geocoder_query.geocode
+    end
+    return nil
+  end
+
 end
