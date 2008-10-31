@@ -29,13 +29,15 @@ class Geocode < ActiveRecord::Base
     geocoder_query = GeocoderQuery.new(:query => query)
     if geocodes.size == 0
       # No existing geocodes
-      create location.attributes.merge(:geocoder_queries => [geocoder_query])
+      return create! location.attributes.merge(:geocoder_queries => [geocoder_query])
     elsif geocodes.size != 1
       # Too many geocodes with this location, should only be one geocode record per location.
       raise RuntimeError.new("There is more than one geocode with the same location: #{location}.")
     else
       # A single existing geocode at this location, create the geocoder query and associate with the geocode.
-      geocodes[0].geocoder_queries << geocoder_query
+      geocode = geocodes.first
+      geocode.geocoder_queries << geocoder_query
+      return geocode
     end
   end
   
