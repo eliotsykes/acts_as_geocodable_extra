@@ -23,9 +23,7 @@ class Geocode < ActiveRecord::Base
   def self.create_by_query(query)
     location = geocoder.locate(query)
     # Find geocodes with this location that already exist
-    geocodes = find(:all, :conditions => {:latitude => location.latitude, :longitude => location.longitude, 
-      :street => location.street, :locality => location.locality, :region => location.region,
-      :postal_code => location.postal_code, :country => location.country})
+    geocodes = find(:all, :conditions => location.attributes)
     geocoder_query = GeocoderQuery.new(:query => query)
     if geocodes.size == 0
       # No existing geocodes
