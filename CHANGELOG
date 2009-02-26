@@ -1,3 +1,13 @@
+---acts_as_geocodable_extra changelog---
+2009-02-26
+* ActiveRecord query calculation methods like count are now geo-aware. Previously find was the 
+  only geo-aware query method.
+
+Late 2008
+* Factored out the query attribute of geocode into its own ActiveRecord, see 
+  geocoder_queries table and GeocoderQuery class
+
+---acts_as_geocodable changelog---
 0.2.0 - 2007-10-27
 * Added validates_as_geocodable (Mark Van Holstyn)
 * Allow address mapping to be a single field (Mark Van Holstyn)

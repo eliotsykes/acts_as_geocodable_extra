@@ -42,55 +42,65 @@ module CollectiveIdea #:nodoc:
           
           include CollectiveIdea::Acts::Geocodable::InstanceMethods
           extend CollectiveIdea::Acts::Geocodable::SingletonMethods
+          geoify_query_methods
         end
-        
+
+        private
+
+          # Extends ActiveRecord's query methods (e.g. find, count) to be geo-aware.
+          #
+          #   Model.find(:all, :within => 10, :origin => "Chicago, IL")
+          #
+          # Whenever find is called with an <tt>:origin</tt>, a +distance+ attribute
+          # indicating the distance to the origin is added to each of the results:
+          #
+          #   Model.find(:first, :origin => "Portland, OR").distance #=> 388.383
+          #
+          # +acts_as_geocodable+ adds 2 other retrieval approaches to ActiveRecord's default
+          # find by id, find <tt>:first</tt>, and find <tt>:all</tt>:
+          #
+          # * <tt>:nearest</tt>: find the nearest location to the given origin
+          # * <tt>:farthest</tt>: find the farthest location from the given origin
+          #
+          #   Model.find(:nearest, :origin => "Grand Rapids, MI")
+          #
+          # == Options
+          #
+          # * <tt>:origin</tt>: A Geocode, String, or geocodable model that specifies
+          #   the origin
+          # * <tt>:within</tt>: Limit to results within this radius of the origin
+          # * <tt>:beyond</tt>: Limit to results outside of this radius from the origin
+          # * <tt>:units</tt>: Units to use for <tt>:within</tt> or <tt>:beyond</tt>.
+          #   Default is <tt>:miles</tt> unless specified otherwise in the +acts_as_geocodable+
+          #   declaration.
+          #
+          def geoify_query_methods
+            class << self
+              [:calculate, :find].each do |method_name|
+                define_method method_name do |*args|
+                  options = args.extract_options!
+                  origin = location_to_geocode options.delete(:origin)
+                  is_geo_query = !origin.nil?
+                  if is_geo_query
+                    options[:units] ||= acts_as_geocodable_options[:units]
+                    add_distance_to_select!(origin, options) unless (method_name == :calculate)
+                    with_proximity!(args, options) do
+                      geocode_conditions!(options, origin) do
+                        join_geocodes { super *args.push(options) }
+                      end
+                    end
+                  else
+                    super *args.push(options)
+                  end
+                end
+              end
+            end
+          end
+
       end
 
       module SingletonMethods
-        
-        # Extends ActiveRecord's find method to be geo-aware.
-        #
-        #   Model.find(:all, :within => 10, :origin => "Chicago, IL")
-        #
-        # Whenever find is called with an <tt>:origin</tt>, a +distance+ attribute
-        # indicating the distance to the origin is added to each of the results:
-        #
-        #   Model.find(:first, :origin => "Portland, OR").distance #=> 388.383
-        #
-        # +acts_as_geocodable+ adds 2 other retrieval approaches to ActiveRecord's default
-        # find by id, find <tt>:first</tt>, and find <tt>:all</tt>:
-        #
-        # * <tt>:nearest</tt>: find the nearest location to the given origin
-        # * <tt>:farthest</tt>: find the farthest location from the given origin
-        #
-        #   Model.find(:nearest, :origin => "Grand Rapids, MI")
-        #
-        # == Options
-        #
-        # * <tt>:origin</tt>: A Geocode, String, or geocodable model that specifies
-        #   the origin
-        # * <tt>:within</tt>: Limit to results within this radius of the origin
-        # * <tt>:beyond</tt>: Limit to results outside of this radius from the origin
-        # * <tt>:units</tt>: Units to use for <tt>:within</tt> or <tt>:beyond</tt>.
-        #   Default is <tt>:miles</tt> unless specified otherwise in the +acts_as_geocodable+
-        #   declaration.
-        #
-        def find(*args)
-          options = args.extract_options!
-          origin = location_to_geocode options.delete(:origin)
-          if origin
-            options[:units] ||= acts_as_geocodable_options[:units]
-            add_distance_to_select!(origin, options)
-            with_proximity!(args, options) do
-              geocode_conditions!(options, origin) do
-                join_geocodes { super *args.push(options) }
-              end
-            end
-          else
-            super *args.push(options)
-          end
-        end
-        
+                
         # Convert the given location to a Geocode
         def location_to_geocode(location)
           case location
@@ -109,9 +119,10 @@ module CollectiveIdea #:nodoc:
             end
           end
         end
+        
       
       private
-      
+
         def add_distance_to_select!(origin, options)
           (options[:select] ||= "#{table_name}.*") <<
             ", #{sql_for_distance(origin, options[:units])} AS

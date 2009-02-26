@@ -1,3 +1,8 @@
+acts_as_geocodable_extra is some tweaks I've made to acts_as_geocodable that I've needed, 
+see changelog for details. Original documentation below.
+
+
+
 = acts_as_geocodable
 
 acts_as_geocodable is a plugin to help build geo-aware applications. It automatically geocodes your models when they are saved, giving you the ability to search by location and calculate distances between records.
