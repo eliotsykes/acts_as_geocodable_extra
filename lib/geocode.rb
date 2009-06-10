@@ -63,7 +63,7 @@ class Geocode < ActiveRecord::Base
 
   # Note this may return values to the opposite way you were expecting!
   def coordinates
-    "#{longitude},#{latitude}"
+    "#{self.longitude},#{self.latitude}"
   end
 
   def to_s
